@@ -1,0 +1,387 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  password       String
+  name           String?
+  role           Role            @default(OWNER)
+  ownerId        String?
+  owner          User?           @relation("TeamMembers", fields: [ownerId], references: [id])
+  members        User[]          @relation("TeamMembers")
+  posts          Post[]
+  tasks          Task[]
+  projects       Project[]
+  funnels        Funnel[]
+  videoClips     VideoClip[]
+  settings       Setting[]
+  instagramTokens InstagramToken[]
+  invitations    Invitation[]
+  brands         Brand[]
+  allowedPages   String[]        @default([])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([ownerId])
+}
+
+model Brand {
+  id              String   @id @default(uuid())
+  name            String
+  logoUrl         String?
+  primaryColor    String   @default("#6C5CE7")
+  secondaryColor  String   @default("#E84393")
+  accentColor     String?
+  backgroundColor String?
+  textColor       String?
+  mutedColor      String?
+  fontFamily      String?
+  headingFont     String?
+  bodyFont        String?
+  description     String?
+  voiceTone       String?
+  websiteUrl      String?
+  instagramUrl    String?
+  products        String[] @default([])
+  defaultHashtags String[] @default([])
+  isDefault       Boolean  @default(false)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Invitation {
+  id           String    @id @default(uuid())
+  email        String
+  role         Role      @default(EDITOR)
+  token        String    @unique @default(uuid())
+  expiresAt    DateTime
+  usedAt       DateTime?
+  allowedPages String[]  @default([])
+  ownerId      String
+  owner        User      @relation(fields: [ownerId], references: [id])
+  createdAt    DateTime  @default(now())
+
+  @@index([ownerId])
+  @@index([token])
+}
+
+model Post {
+  id              String      @id @default(uuid())
+  caption         String?
+  imageUrl        String?
+  imageSource     ImageSource @default(NANOBANA)
+  nanoPrompt      String?
+  status          PostStatus  @default(DRAFT)
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  instagramId     String?
+  source          PostSource  @default(WEB)
+  hashtags        String[]
+  aspectRatio     String      @default("1:1")
+  isCarousel      Boolean     @default(false)
+  mediaType       MediaType   @default(IMAGE)
+  publishMode     PublishMode @default(FEED)
+  videoUrl        String?
+  videoMinioKey   String?
+  videoDurationSec Int?
+  videoSizeBytes  Int?
+  keepMedia       Boolean     @default(false)
+  lastError       String?
+  editorState     Json?
+  driveLink       String?
+  fileUrl         String?
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  images          PostImage[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([userId])
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  CAROUSEL
+}
+
+enum PublishMode {
+  FEED
+  REELS
+  STORIES
+}
+
+model PostImage {
+  id        String      @id @default(uuid())
+  imageUrl  String
+  minioKey  String?
+  order     Int         @default(0)
+  source    ImageSource @default(NANOBANA)
+  prompt    String?
+  postId    String
+  post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@index([postId])
+  @@unique([postId, order])
+}
+
+model InstagramToken {
+  id              String   @id @default(uuid())
+  accessToken     String
+  instagramUserId String
+  username        String?
+  pageId          String?
+  isDefault       Boolean  @default(false)
+  expiresAt       DateTime
+  refreshedAt     DateTime @default(now())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+enum ImageSource {
+  NANOBANA
+  UPLOAD
+  URL
+}
+
+enum PostSource {
+  WEB
+  TELEGRAM
+  MCP
+}
+
+// === Task & Project enums ===
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskPlatform {
+  YOUTUBE
+  INSTAGRAM
+  META_ADS
+  TIKTOK
+  OTHER
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+// === Task & Project models ===
+
+model Task {
+  id              String       @id @default(uuid())
+  title           String
+  description     String?
+  platform        TaskPlatform @default(OTHER)
+  status          TaskStatus   @default(PENDING)
+  priority        TaskPriority @default(MEDIUM)
+  recordDate      DateTime?
+  publishDate     DateTime?
+  script          String?
+  scriptFileUrl   String?
+  driveLink       String?
+  isSponsored     Boolean      @default(false)
+  sponsorName     String?
+  sponsorBriefing String?
+  briefingFileUrl String?
+  sponsorContact  String?
+  sponsorDeadline DateTime?
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  projectId       String?
+  project         Project?     @relation(fields: [projectId], references: [id])
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+  @@index([recordDate])
+  @@index([publishDate])
+  @@index([projectId])
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  status      ProjectStatus @default(PLANNING)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  modules     ProjectModule[]
+  tasks       Task[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model ProjectModule {
+  id         String   @id @default(uuid())
+  title      String
+  content    String?
+  order      Int      @default(0)
+  isRecorded Boolean  @default(false)
+  driveLink  String?
+  fileUrl    String?
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([projectId])
+  @@unique([projectId, order])
+}
+
+// === Funnel enums ===
+
+enum FunnelStepType {
+  LANDING_PAGE
+  LEAD_CAPTURE
+  EMAIL_SEQUENCE
+  SALES_PAGE
+  CHECKOUT
+  UPSELL
+  THANK_YOU
+  WEBINAR
+  VIDEO
+  SOCIAL_POST
+  AD
+  OTHER
+}
+
+enum FunnelStepStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+// === Funnel models ===
+
+model Funnel {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  stages      FunnelStage[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model FunnelStage {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  color       String       @default("#6366f1")
+  order       Int          @default(0)
+  funnelId    String
+  funnel      Funnel       @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  steps       FunnelStep[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([funnelId])
+  @@unique([funnelId, order])
+}
+
+model FunnelStep {
+  id          String           @id @default(uuid())
+  title       String
+  description String?
+  type        FunnelStepType   @default(OTHER)
+  link        String?
+  status      FunnelStepStatus @default(TODO)
+  order       Int              @default(0)
+  stageId     String
+  stage       FunnelStage      @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([stageId])
+  @@unique([stageId, order])
+}
+
+// === Video Clip models ===
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String
+  value     String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@index([userId])
+}
+
+model VideoClip {
+  id        String   @id @default(uuid())
+  title     String?
+  sourceUrl String
+  language  String?
+  duration  Int?
+  status    String   @default("PENDING") // PENDING, ANALYZING, ANALYZED, CLIPPING, READY, FAILED
+  error     String?
+  moments   Json?
+  clips     Json?
+  workDir   String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}

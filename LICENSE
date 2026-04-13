@@ -1,0 +1,39 @@
+OpenHive AI - Source Available License v1.0
+
+Copyright (c) 2024-2026 Helio Arreche (NetoNetoArreche)
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use
+the Software for personal and internal business purposes, subject to the
+following conditions:
+
+1. ALLOWED:
+   - Use the Software for personal or internal business purposes
+   - Deploy the Software on your own servers for your own use
+   - Study the source code to learn from it
+
+2. NOT ALLOWED:
+   - Sell, sublicense, or commercially distribute the Software or any
+     derivative works based on it
+   - Modify, adapt, or create derivative works of the Software for the
+     purpose of distribution or commercial use
+   - Offer the Software as a hosted service (SaaS) to third parties
+   - Remove or alter this license notice from any copies
+   - Rebrand, rename, or present the Software as your own product
+
+3. CONTRIBUTIONS:
+   - Contributions via pull requests are welcome and will be licensed
+     under the same terms as this license
+   - By contributing, you agree that your contributions become part of
+     the Software under these terms
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+For commercial licensing inquiries, contact: helioarreche@gmail.com

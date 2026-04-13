@@ -1,0 +1,7 @@
+yt-dlp[default]
+faster-whisper
+opencv-python-headless
+Pillow
+pycryptodomex
+brotli
+certifi
