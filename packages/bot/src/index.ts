@@ -20,110 +20,112 @@ import { InlineKeyboard } from 'grammy';
 import { sendPhoto } from './utils/send-photo';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
-if (!token) {
-  console.error('TELEGRAM_BOT_TOKEN not set');
-  process.exit(1);
+if (!token || token.trim() === '') {
+  console.error('TELEGRAM_BOT_TOKEN not set. Bot will stay idle to prevent Docker restart loops.');
+  setInterval(() => {}, 60_000);
+} else {
+  const bot = new Bot(token);
+
+  // Auth middleware
+  bot.use(authMiddleware);
+
+  // Commands
+  bot.command('start', startCommand);
+  bot.command('novopost', novopostCommand);
+  bot.command('gerar', gerarCommand);
+  bot.command('agendar', agendarCommand);
+  bot.command('listar', listarCommand);
+  bot.command('publicar', publicarCommand);
+  bot.command('cancelar', cancelarCommand);
+  bot.command('status', statusCommand);
+  bot.command('tarefas', tarefasCommand);
+  bot.command('projetos', projetosCommand);
+  bot.command('funis', funisCommand);
+  bot.command('clip', clipCommand);
+  bot.command('clipcortar', clipCortarCommand);
+  bot.command('template', templateCommand);
+
+  // Callback queries (inline buttons)
+  bot.on('callback_query:data', handleCallbackQuery);
+
+  // Free text → interpret as post creation request
+  bot.on('message:text', async (ctx) => {
+    const text = ctx.message.text;
+    if (text.startsWith('/')) return;
+
+    await ctx.reply(`⏳ *Gerando post sobre:* _${text}_\n\nCriando imagem e legenda com IA... Aguarde.`, { parse_mode: 'Markdown' });
+
+    try {
+      const [imageSettled, captionSettled] = await Promise.allSettled([
+        api.generateImage(text),
+        api.generateCaption(text),
+      ]);
+
+      const imageResult = imageSettled.status === 'fulfilled' ? imageSettled.value : null;
+      const captionResult = captionSettled.status === 'fulfilled' ? captionSettled.value : null;
+
+      if (imageSettled.status === 'rejected') {
+        console.error('[Bot] Image generation failed:', imageSettled.reason?.message);
+      }
+      if (captionSettled.status === 'rejected') {
+        console.error('[Bot] Caption generation failed:', captionSettled.reason?.message);
+      }
+
+      if (!imageResult && !captionResult) {
+        await ctx.reply('❌ Nao foi possivel gerar imagem nem legenda. Tente novamente em alguns minutos.');
+        return;
+      }
+
+      const caption = captionResult?.caption || text;
+      const hashtags = captionResult?.hashtags || [];
+
+      const post = (await api.createPost({
+        caption,
+        imageUrl: imageResult?.imageUrl || null,
+        hashtags,
+        nanoPrompt: text,
+        source: 'TELEGRAM',
+      })) as any;
+
+      const keyboard = new InlineKeyboard()
+        .text('✅ Aprovar', `approve_${post.id}`)
+        .text('🔄 Nova Imagem', `regen_${post.id}`)
+        .row()
+        .text('📤 Publicar Agora', `publish_${post.id}`)
+        .text('📅 Agendar', `schedule_${post.id}`)
+        .row()
+        .text('❌ Cancelar', `cancel_${post.id}`);
+
+      const captionText = `${caption}\n\n${hashtags.map((h: string) => `#${h}`).join(' ')}`;
+      let statusMsg = '';
+      if (!imageResult) statusMsg = '\n\n⚠️ Imagem indisponivel (IA sobrecarregada). Use "Nova Imagem" para tentar novamente.';
+
+      if (imageResult?.imageUrl) {
+        await sendPhoto(ctx, imageResult.imageUrl, {
+          caption: (captionText + statusMsg).slice(0, 1024),
+          reply_markup: keyboard,
+        });
+      } else {
+        await ctx.reply(captionText + statusMsg, { reply_markup: keyboard });
+      }
+    } catch (err: any) {
+      console.error('[Bot] Post generation failed:', err.message);
+      await ctx.reply(`❌ Erro ao gerar post: ${err.message}`);
+    }
+  });
+
+  bot.catch((err) => {
+    console.error('Bot error:', err.message);
+  });
+
+  bot.start({
+    onStart: () => console.log('OpenHive Telegram Bot running!'),
+  }).catch((err) => {
+    console.error('Failed to start bot:', err.message);
+    console.error('Bot will NOT restart - check TELEGRAM_BOT_TOKEN');
+    // Stay alive so Docker doesn't restart loop
+    setInterval(() => {}, 60_000);
+  });
 }
 
-const bot = new Bot(token);
 
-// Auth middleware
-bot.use(authMiddleware);
-
-// Commands
-bot.command('start', startCommand);
-bot.command('novopost', novopostCommand);
-bot.command('gerar', gerarCommand);
-bot.command('agendar', agendarCommand);
-bot.command('listar', listarCommand);
-bot.command('publicar', publicarCommand);
-bot.command('cancelar', cancelarCommand);
-bot.command('status', statusCommand);
-bot.command('tarefas', tarefasCommand);
-bot.command('projetos', projetosCommand);
-bot.command('funis', funisCommand);
-bot.command('clip', clipCommand);
-bot.command('clipcortar', clipCortarCommand);
-bot.command('template', templateCommand);
-
-// Callback queries (inline buttons)
-bot.on('callback_query:data', handleCallbackQuery);
-
-// Free text → interpret as post creation request
-bot.on('message:text', async (ctx) => {
-  const text = ctx.message.text;
-  if (text.startsWith('/')) return;
-
-  await ctx.reply(`⏳ *Gerando post sobre:* _${text}_\n\nCriando imagem e legenda com IA... Aguarde.`, { parse_mode: 'Markdown' });
-
-  try {
-    const [imageSettled, captionSettled] = await Promise.allSettled([
-      api.generateImage(text),
-      api.generateCaption(text),
-    ]);
-
-    const imageResult = imageSettled.status === 'fulfilled' ? imageSettled.value : null;
-    const captionResult = captionSettled.status === 'fulfilled' ? captionSettled.value : null;
-
-    if (imageSettled.status === 'rejected') {
-      console.error('[Bot] Image generation failed:', imageSettled.reason?.message);
-    }
-    if (captionSettled.status === 'rejected') {
-      console.error('[Bot] Caption generation failed:', captionSettled.reason?.message);
-    }
-
-    if (!imageResult && !captionResult) {
-      await ctx.reply('❌ Nao foi possivel gerar imagem nem legenda. Tente novamente em alguns minutos.');
-      return;
-    }
-
-    const caption = captionResult?.caption || text;
-    const hashtags = captionResult?.hashtags || [];
-
-    const post = (await api.createPost({
-      caption,
-      imageUrl: imageResult?.imageUrl || null,
-      hashtags,
-      nanoPrompt: text,
-      source: 'TELEGRAM',
-    })) as any;
-
-    const keyboard = new InlineKeyboard()
-      .text('✅ Aprovar', `approve_${post.id}`)
-      .text('🔄 Nova Imagem', `regen_${post.id}`)
-      .row()
-      .text('📤 Publicar Agora', `publish_${post.id}`)
-      .text('📅 Agendar', `schedule_${post.id}`)
-      .row()
-      .text('❌ Cancelar', `cancel_${post.id}`);
-
-    const captionText = `${caption}\n\n${hashtags.map((h: string) => `#${h}`).join(' ')}`;
-    let statusMsg = '';
-    if (!imageResult) statusMsg = '\n\n⚠️ Imagem indisponivel (IA sobrecarregada). Use "Nova Imagem" para tentar novamente.';
-
-    if (imageResult?.imageUrl) {
-      await sendPhoto(ctx, imageResult.imageUrl, {
-        caption: (captionText + statusMsg).slice(0, 1024),
-        reply_markup: keyboard,
-      });
-    } else {
-      await ctx.reply(captionText + statusMsg, { reply_markup: keyboard });
-    }
-  } catch (err: any) {
-    console.error('[Bot] Post generation failed:', err.message);
-    await ctx.reply(`❌ Erro ao gerar post: ${err.message}`);
-  }
-});
-
-bot.catch((err) => {
-  console.error('Bot error:', err.message);
-});
-
-bot.start({
-  onStart: () => console.log('OpenHive Telegram Bot running!'),
-}).catch((err) => {
-  console.error('Failed to start bot:', err.message);
-  console.error('Bot will NOT restart - check TELEGRAM_BOT_TOKEN');
-  // Stay alive so Docker doesn't restart loop
-  setInterval(() => {}, 60_000);
-});
