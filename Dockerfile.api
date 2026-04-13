@@ -33,8 +33,9 @@ RUN npm run build --workspace=packages/api
 
 # Install video worker Node dependencies
 COPY scripts/video/package.json /tmp/video-pkg/package.json
-RUN cd /tmp/video-pkg && npm install --omit=dev && cp -r node_modules /app/scripts/video/
-RUN cd /app/scripts/video && npx prisma generate --schema=/app/packages/api/prisma/schema.prisma
+RUN cd /tmp/video-pkg && npm install --omit=dev && cp -a node_modules /app/scripts/video/
+# Force worker to use the root generated Prisma client by deleting the local duplicate shell
+RUN rm -rf /app/scripts/video/node_modules/@prisma /app/scripts/video/node_modules/.prisma
 
 # Startup script: run API + video worker together
 RUN printf '#!/bin/bash\necho "[startup] Starting video worker..."\nnode /app/scripts/video/worker.mjs &\necho "[startup] Starting API..."\nexec node /app/packages/api/dist/index.js\n' > /app/start.sh && chmod +x /app/start.sh
