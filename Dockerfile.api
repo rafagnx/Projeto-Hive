@@ -15,7 +15,7 @@ RUN python3 -m venv /opt/venv && \
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Node dependencies
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/api/package.json packages/api/
 COPY packages/shared/package.json packages/shared/
 RUN npm ci --workspace=packages/shared --workspace=packages/api --include-workspace-root
