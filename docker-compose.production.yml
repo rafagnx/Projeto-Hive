@@ -71,8 +71,8 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin_secret}
       MINIO_USE_SSL: 'false'
       MINIO_BUCKET: ${MINIO_BUCKET:-instapost-images}
-      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
       INSTAGRAM_ACCESS_TOKEN: ${INSTAGRAM_ACCESS_TOKEN:-}
       INSTAGRAM_USER_ID: ${INSTAGRAM_USER_ID:-}
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
@@ -99,6 +99,10 @@ services:
     environment:
       NODE_ENV: production
       API_INTERNAL_URL: http://api:3001
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_WEBSITE_URL: ${NEXT_PUBLIC_WEBSITE_URL}
     ports:
       - '${WEB_PORT:-3000}:3000'
     depends_on:
